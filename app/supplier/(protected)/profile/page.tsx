@@ -1,0 +1,4 @@
+import AccountPrivacyClient from '@/components/platform/AccountPrivacyClient';
+import ManufacturerProfileForm from '@/components/portal/ManufacturerProfileForm';
+import { getLocale } from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <main className="portal-page"><p className="eyebrow">{en?'SUPPLIER CAPABILITIES':'BESZÁLLÍTÓI KAPACITÁS'}</p><h1>{en?'Supplier profile':'Beszállítói profil'}</h1><p className="portal-lead">{en?'The marketplace profile becomes visible only after admin approval. Manufacturer, wholesaler and hybrid companies are supported.':'A marketplace profil csak admin jóváhagyás után válik láthatóvá. Gyártó, nagykereskedő és vegyes cégtípus is támogatott.'}</p><ManufacturerProfileForm locale={locale}/><AccountPrivacyClient locale={locale}/></main>}

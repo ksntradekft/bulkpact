@@ -1,0 +1,2 @@
+import AuthForm from '@/components/auth/AuthForm';import {getLocale} from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <AuthForm mode="login" role="MANUFACTURER" locale={locale} title={en?'Supplier login':'Beszállítói bejelentkezés'} subtitle={en?'Create and manage high-MOQ Group Orders, verification and fulfilment.':'Kezeld magas MOQ-s Group Ordereidet, ellenőrzésedet és teljesítéseidet.'}/>}

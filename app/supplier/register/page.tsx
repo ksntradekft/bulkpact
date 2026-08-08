@@ -1,0 +1,2 @@
+import AuthForm from '@/components/auth/AuthForm';import {getLocale} from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <AuthForm mode="register" role="MANUFACTURER" locale={locale} title={en?'Supplier registration':'Beszállítói regisztráció'} subtitle={en?'Manufacturers, importers, wholesalers and distributors can submit fixed-price high-MOQ offers for business buyers.':'Gyártók, importőrök, nagykereskedők és disztribútorok fix árú, magas MOQ-s ajánlatokat küldhetnek üzleti vevőknek.'}/>}

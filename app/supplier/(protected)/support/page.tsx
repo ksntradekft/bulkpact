@@ -1,0 +1,1 @@
+import SupportClient from '@/components/platform/SupportClient';import {getLocale} from '@/lib/i18n-server';export const dynamic='force-dynamic';export default async function Page(){const locale=await getLocale();return <main className="portal-page"><SupportClient locale={locale}/></main>}
