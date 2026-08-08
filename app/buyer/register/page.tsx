@@ -1,0 +1,2 @@
+import AuthForm from '@/components/auth/AuthForm';import {getLocale} from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <AuthForm mode="register" role="BUYER" locale={locale} title={en?'Buyer / business registration':'Vevői / vállalkozói regisztráció'} subtitle={en?'Create a company account to join fixed-price Group Orders and combine your purchasing power with other businesses.':'Hozz létre céges fiókot, csatlakozz fix árú Group Orderekhez, és vond össze a vásárlóerődet más vállalkozásokkal.'}/>}

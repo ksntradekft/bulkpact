@@ -1,0 +1,2 @@
+import AdminVerificationClient from '@/components/platform/AdminVerificationClient';import { getLocale } from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <main className="portal-page"><p className="eyebrow">TRUST & COMPLIANCE</p><h1>{en?'Supplier verification':'Gyártói verification'}</h1><AdminVerificationClient locale={locale}/></main>}

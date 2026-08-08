@@ -1,0 +1,2 @@
+import AuthForm from '@/components/auth/AuthForm';import {getLocale} from '@/lib/i18n-server';
+export default async function Page(){const locale=await getLocale();const en=locale==='en';return <AuthForm mode="login" role="BUYER" locale={locale} title={en?'Buyer login':'Vevői bejelentkezés'} subtitle={en?'Manage Group Order commitments, deposits, orders and purchasing history.':'Kezeld a Group Order foglalásaidat, előlegeidet, rendeléseidet és beszerzési előzményeidet.'}/>}
