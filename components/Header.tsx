@@ -3,6 +3,7 @@ import { getCurrentSession, portalForRole } from '@/lib/auth-server';
 import { getLocale } from '@/lib/i18n-server';
 import LanguageSwitcher from './LanguageSwitcher';
 import { getPlatformSettings } from '@/lib/platform-settings';
+import MobileSiteMenu from './MobileSiteMenu';
 
 export default async function Header() {
   const [session, locale, settings] = await Promise.all([
@@ -25,6 +26,7 @@ export default async function Header() {
         </nav>
         <div className="header-actions">
           <LanguageSwitcher locale={locale} compact />
+          <MobileSiteMenu locale={locale} groupOrdersEnabled={settings.group_orders_enabled} registrationsEnabled={settings.registrations_enabled} dashboardHref={session ? portalForRole(session.profile.role) : null} />
           {session
             ? <Link href={portalForRole(session.profile.role)} className="button button-secondary button-small">{en ? 'Dashboard' : 'Saját felület'}</Link>
             : <Link href="/login" className="header-login">{en ? 'Log in' : 'Belépés'}</Link>}

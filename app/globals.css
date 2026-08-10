@@ -200,3 +200,66 @@
 .role-switch.compact{background:#fff;color:#102019;border-color:var(--line);padding:8px 10px;font-size:11px}
 .portal-mobile-drawer>.role-switch{width:100%;margin-top:12px}
 @media(max-width:700px){.portal-topbar-actions>.role-switch{display:none}}
+
+/* BulkPact v1.2.3 desktop alignment + public mobile navigation */
+.portal-topbar-actions{
+  display:flex!important;
+  grid-auto-flow:column;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  min-width:0;
+}
+.portal-topbar-actions>*{flex:0 0 auto}
+.portal-topbar-actions .role-switch.compact{white-space:nowrap}
+.portal-topbar{overflow:visible}
+.portal-page{position:relative}
+
+/* Keep pricing CTAs on one visual baseline even when copy length differs. */
+.monetization-plan-grid>article{
+  grid-template-rows:auto auto auto auto 1fr auto;
+  height:100%;
+}
+.monetization-plan-grid>article>ul{align-self:start}
+.monetization-plan-grid>article>.button{
+  align-self:end;
+  width:100%;
+  min-height:48px;
+  justify-content:center;
+}
+.monetization-plan-grid{align-items:stretch}
+
+/* Public site mobile menu */
+.site-mobile-menu{display:none;position:relative}
+.site-mobile-menu-button{
+  width:42px;height:42px;border:1px solid var(--line);border-radius:11px;
+  background:#fff;color:var(--ink);display:grid;place-items:center;cursor:pointer
+}
+.site-mobile-menu-panel{
+  position:absolute;right:0;top:50px;width:min(310px,calc(100vw - 24px));
+  background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;
+  box-shadow:0 18px 45px rgba(0,0,0,.16);z-index:100
+}
+.site-mobile-menu-panel nav{display:grid;gap:4px}
+.site-mobile-menu-panel a{
+  padding:12px 13px;border-radius:10px;font-weight:800;color:var(--ink)
+}
+.site-mobile-menu-panel a:hover{background:#f0f4f1}
+.site-mobile-menu-panel .mobile-menu-primary{background:#102019;color:#fff;margin-top:4px}
+@media(max-width:900px){
+  .site-header .desktop-nav{display:none!important}
+  .site-mobile-menu{display:block}
+  .site-header .header-actions>.header-login,
+  .site-header .header-actions>.button{display:none!important}
+  .site-header .header-actions{display:flex;align-items:center;gap:8px}
+}
+@media(max-width:700px){
+  .portal-topbar-actions{display:flex!important;flex-wrap:nowrap}
+  .portal-topbar-actions .role-switch{display:none}
+  .portal-topbar-actions .button{display:none}
+}
+@media(max-width:480px){
+  .site-header .nav-wrap{min-height:62px}
+  .site-header .brand strong{font-size:16px}
+  .site-header .header-actions{gap:6px}
+}
