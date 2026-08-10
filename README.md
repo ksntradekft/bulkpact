@@ -209,3 +209,7 @@ For scheduled follow-ups, configure a protected request to `/api/automation/foll
 ## Internal naming
 
 For code stability the authenticated supplier role is internally named `MANUFACTURER`, while `manufacturer_profiles.supplier_type` supports `MANUFACTURER`, `WHOLESALER` and `BOTH`. The user-facing product consistently uses **Supplier**. No private-label/RFQ workflow is part of this clean database.
+
+
+## Buyer / Supplier módváltás
+Egy normál felhasználói fiók ugyanazzal az Auth azonosítóval válthat BUYER és MANUFACTURER működési mód között. Az első eladói mód aktiválásakor a rendszer automatikusan létrehozza a supplier profilt PENDING jóváhagyási állapottal. ADMIN fiók nem válthat szerepet a felhasználói kapcsolóval.
