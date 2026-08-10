@@ -7,7 +7,7 @@ export async function GET(request:NextRequest){
   const since=daysAgo(30);
   const[profiles,groupOrders,commitments,events]=await Promise.all([
     serviceSelect<any[]>(`profiles?select=id,role,created_at&created_at=gte.${encodeURIComponent(since)}`).catch(()=>[]),
-    serviceSelect<any[]>('group_orders?select=id,title,category,status,target_quantity,unit_price,currency,created_at').catch(()=>[]),
+    serviceSelect<any[]>('group_orders?select=id,title,category,status,target_quantity,unit_price,price_units_per_order_unit,currency,created_at').catch(()=>[]),
     serviceSelect<any[]>(`group_order_commitments?select=id,group_order_id,quantity,status,created_at&created_at=gte.${encodeURIComponent(since)}`).catch(()=>[]),
     serviceSelect<any[]>(`platform_events?select=event_type,created_at&created_at=gte.${encodeURIComponent(since)}`).catch(()=>[]),
   ]);
@@ -16,7 +16,7 @@ export async function GET(request:NextRequest){
   const active=groupOrders.filter((g:any)=>!['COMPLETED','CANCELLED'].includes(g.status));
   const reached=groupOrders.filter((g:any)=>['FILLED','DEPOSIT','LOCKED','SUPPLIER_CONFIRMED','ORDERED','DISPATCHED','DELIVERED','COMPLETED'].includes(g.status));
   const completed=groupOrders.filter((g:any)=>g.status==='COMPLETED');
-  const eurCommittedGmv=groupOrders.filter((g:any)=>g.currency==='EUR').reduce((s:number,g:any)=>s+(committedByOrder.get(g.id)||0)*(Number(g.unit_price)||0),0);
+  const eurCommittedGmv=groupOrders.filter((g:any)=>g.currency==='EUR').reduce((s:number,g:any)=>s+(committedByOrder.get(g.id)||0)*Math.max(0.000001,Number(g.price_units_per_order_unit)||1)*(Number(g.unit_price)||0),0);
   const categories=Object.entries(groupOrders.reduce((acc:any,x:any)=>(acc[x.category||'Other']=(acc[x.category||'Other']||0)+1,acc),{})).map(([name,value])=>({name,value})).sort((x:any,y:any)=>Number(y.value)-Number(x.value));
   const eventCounts=Object.entries(events.reduce((acc:any,x:any)=>(acc[x.event_type]=(acc[x.event_type]||0)+1,acc),{})).map(([name,value])=>({name,value})).sort((x:any,y:any)=>Number(y.value)-Number(x.value));
   const withCommitments=groupOrders.filter((g:any)=>(committedByOrder.get(g.id)||0)>0).length;

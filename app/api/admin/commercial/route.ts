@@ -13,7 +13,7 @@ function audienceForProfile(p:any,supplierType:string):MonetizationAudience{if(p
 export async function GET(request:NextRequest){
   const auth=await requireApiRole(request,'ADMIN');if(!auth.session)return NextResponse.json({error:auth.error},{status:auth.status});
   const[groupOrders,profiles,suppliers,deletions,requests,subscriptions,ledger,offers]=await Promise.all([
-    serviceSelect<any[]>('group_orders?select=id,created_by,title,target_quantity,unit_price,currency,platform_fee_pct,platform_fee_amount,commission_status,status,created_at&order=created_at.desc').catch(()=>[]),
+    serviceSelect<any[]>('group_orders?select=id,created_by,title,target_quantity,unit_price,price_units_per_order_unit,currency,platform_fee_pct,platform_fee_amount,commission_status,status,created_at&order=created_at.desc').catch(()=>[]),
     serviceSelect<any[]>('profiles?select=id,email,company_name,role,plan,success_fee_pct,billing_cycle,subscription_status,plan_started_at,plan_renews_at&order=created_at.desc').catch(()=>[]),
     serviceSelect<any[]>('manufacturer_profiles?select=id,supplier_type,featured,featured_until,verification_level').catch(()=>[]),
     serviceSelect<any[]>('data_deletion_requests?select=*&order=created_at.desc').catch(()=>[]),
@@ -35,7 +35,7 @@ export async function GET(request:NextRequest){
   const eurLedger=ledger.filter(x=>x.currency==='EUR');
   const paidRevenue=eurLedger.filter(x=>x.status==='PAID').reduce((s,x)=>s+num(x.amount),0);
   const openRevenue=eurLedger.filter(x=>['PENDING','INVOICED'].includes(x.status)).reduce((s,x)=>s+num(x.amount),0);
-  const commercialGroupOrders=groupOrders.filter((o:any)=>o.currency==='EUR'&&['FILLED','DEPOSIT','LOCKED','SUPPLIER_CONFIRMED','ORDERED','DISPATCHED','DELIVERED','COMPLETED'].includes(o.status));const gmv=commercialGroupOrders.reduce((s:number,o:any)=>s+num(o.target_quantity)*num(o.unit_price),0);const fees=commercialGroupOrders.reduce((s:number,o:any)=>s+num(o.platform_fee_amount),0);
+  const commercialGroupOrders=groupOrders.filter((o:any)=>o.currency==='EUR'&&['FILLED','DEPOSIT','LOCKED','SUPPLIER_CONFIRMED','ORDERED','DISPATCHED','DELIVERED','COMPLETED'].includes(o.status));const gmv=commercialGroupOrders.reduce((s:number,o:any)=>s+num(o.target_quantity)*Math.max(0.000001,num(o.price_units_per_order_unit)||1)*num(o.unit_price),0);const fees=commercialGroupOrders.reduce((s:number,o:any)=>s+num(o.platform_fee_amount),0);
   const activePaid=enrichedProfiles.filter(p=>{if(p.role==='ADMIN'||p.subscription_status!=='ACTIVE')return false;const code=normalizePlanCode(p.plan,audienceForProfile(p,p.supplier_type));const plan=getPlan(code);return Boolean(plan&&num(plan.priceMonthly)>0)}).length;
   const activeCodes=new Set([...MONETIZATION_PLANS.map(x=>x.code),...MONETIZATION_ADDONS.map(x=>x.code)]);const visibleOffers=offers.filter((o:any)=>activeCodes.has(o.code));
   return NextResponse.json({groupOrders,profiles:enrichedProfiles,deletions,requests,subscriptions,ledger,offers:visibleOffers,kpis:{eur_gmv:gmv,eur_order_fees:fees,mrr,arr:mrr*12,paid_revenue:paidRevenue,open_revenue:openRevenue,group_orders:groupOrders.length,paid_commissions:groupOrders.filter(o=>o.commission_status==='PAID').length,pending_requests:requests.filter(r=>['REQUESTED','IN_REVIEW'].includes(r.status)).length,active_paid_accounts:activePaid}});
@@ -55,7 +55,7 @@ async function activateRequest(requestId:string,adminId:string){
   if(plan){
     const offer=(await serviceSelect<any[]>(`commercial_offers?code=eq.${encodeURIComponent(plan.code)}&select=price,currency,metadata&limit=1`).catch(()=>[]))[0];
     const effectivePrice=optionalNum(cycle==='YEARLY'?(offer?.metadata?.yearly??plan.priceYearly):(offer?.price??plan.priceMonthly));const renews=effectivePrice==null?null:addDays(cycle==='YEARLY'?365:30);const currency=offer?.currency||plan.currency;
-    await serviceWrite(`profiles?id=eq.${encodeURIComponent(req.user_id)}`,{method:'PATCH',body:JSON.stringify({plan:plan.code,billing_cycle:cycle,subscription_status:effectivePrice===0?'FREE':'ACTIVE',plan_started_at:new Date().toISOString(),plan_renews_at:renews,success_fee_pct:plan.entitlements.successFeePct??null,updated_at:new Date().toISOString()})});
+    await serviceWrite(`profiles?id=eq.${encodeURIComponent(req.user_id)}`,{method:'PATCH',body:JSON.stringify({plan:plan.code,billing_cycle:cycle,subscription_status:effectivePrice===0?'FREE':'ACTIVE',plan_started_at:new Date().toISOString(),plan_renews_at:renews,success_fee_pct:1.5,updated_at:new Date().toISOString()})});
     await serviceWrite('subscriptions',{method:'POST',body:JSON.stringify({user_id:req.user_id,plan_code:plan.code,billing_cycle:cycle,status:'ACTIVE',price:effectivePrice,currency,starts_at:new Date().toISOString(),renews_at:renews,notes:`Activated from billing request ${req.id}`})});
     if(effectivePrice&&effectivePrice>0)await serviceWrite('revenue_ledger',{method:'POST',body:JSON.stringify({user_id:req.user_id,source_type:'SUBSCRIPTION',offer_code:plan.code,reference_type:'BILLING_REQUEST',reference_id:req.id,description:`${plan.nameEn} ${cycle.toLowerCase()} subscription`,amount:effectivePrice,currency,status:'INVOICED'})});
     if(profile.role==='MANUFACTURER'&&plan.entitlements.featuredProfile)await serviceWrite(`manufacturer_profiles?id=eq.${encodeURIComponent(req.user_id)}`,{method:'PATCH',body:JSON.stringify({featured:true,featured_until:renews,updated_at:new Date().toISOString()})}).catch(()=>null);
@@ -82,21 +82,33 @@ export async function PATCH(request:NextRequest){
   if(b.ledger_id){const status=text(b.status||'PENDING');const patch:any={status,updated_at:new Date().toISOString()};if(status==='PAID')patch.paid_at=new Date().toISOString();await serviceWrite(`revenue_ledger?id=eq.${encodeURIComponent(text(b.ledger_id))}`,{method:'PATCH',body:JSON.stringify(patch)});return NextResponse.json({success:true})}
   if(b.offer_code){
     const offerCode=text(b.offer_code);const patch:any={updated_at:new Date().toISOString()};
-    if(b.price!==undefined)patch.price=b.price===''?null:Number(b.price);if(b.price_pct!==undefined)patch.price_pct=b.price_pct===''?null:Number(b.price_pct);if(b.active!==undefined)patch.active=Boolean(b.active);if(b.featured!==undefined)patch.featured=Boolean(b.featured);
+    if(b.price!==undefined)patch.price=b.price===''?null:Number(b.price);if(b.price_pct!==undefined)patch.price_pct=['GROUP_ORDER_TRANSACTION_FEE','SUCCESS_FEE'].includes(offerCode)?1.5:(b.price_pct===''?null:Number(b.price_pct));if(b.active!==undefined)patch.active=Boolean(b.active);if(b.featured!==undefined)patch.featured=Boolean(b.featured);
     if(b.yearly_price!==undefined){const current=(await serviceSelect<any[]>(`commercial_offers?code=eq.${encodeURIComponent(offerCode)}&select=metadata&limit=1`).catch(()=>[]))[0];patch.metadata={...(current?.metadata||{}),yearly:b.yearly_price===''?null:Number(b.yearly_price)}}
     await serviceWrite(`commercial_offers?code=eq.${encodeURIComponent(offerCode)}`,{method:'PATCH',body:JSON.stringify(patch)});return NextResponse.json({success:true})
   }
-  if(b.profile_id){const patch:any={};if(b.plan!==undefined)patch.plan=text(b.plan);if(b.success_fee_pct!==undefined)patch.success_fee_pct=b.success_fee_pct===''?null:Number(b.success_fee_pct);if(b.subscription_status!==undefined)patch.subscription_status=text(b.subscription_status);if(b.billing_cycle!==undefined)patch.billing_cycle=text(b.billing_cycle);patch.updated_at=new Date().toISOString();await serviceWrite(`profiles?id=eq.${encodeURIComponent(text(b.profile_id))}`,{method:'PATCH',body:JSON.stringify(patch)});return NextResponse.json({success:true})}
+  if(b.profile_id){const patch:any={};if(b.plan!==undefined)patch.plan=text(b.plan);patch.success_fee_pct=1.5;if(b.subscription_status!==undefined)patch.subscription_status=text(b.subscription_status);if(b.billing_cycle!==undefined)patch.billing_cycle=text(b.billing_cycle);patch.updated_at=new Date().toISOString();await serviceWrite(`profiles?id=eq.${encodeURIComponent(text(b.profile_id))}`,{method:'PATCH',body:JSON.stringify(patch)});return NextResponse.json({success:true})}
   if(b.deletion_id){await serviceWrite(`data_deletion_requests?id=eq.${encodeURIComponent(text(b.deletion_id))}`,{method:'PATCH',body:JSON.stringify({status:text(b.status||'IN_REVIEW'),reviewed_at:new Date().toISOString()})});return NextResponse.json({success:true})}
   if(b.group_order_id){
-    const groupOrderId=text(b.group_order_id);const order=(await serviceSelect<any[]>(`group_orders?id=eq.${encodeURIComponent(groupOrderId)}&select=created_by,title,target_quantity,unit_price,currency&limit=1`).catch(()=>[]))[0];if(!order)return NextResponse.json({error:'Group Order nem található.'},{status:404});
-    const pct=Number(b.platform_fee_pct||0);const amount=num(order.target_quantity)*num(order.unit_price)*pct/100;const commissionStatus=text(b.commission_status||'DUE');
+    const groupOrderId=text(b.group_order_id);const order=(await serviceSelect<any[]>(`group_orders?id=eq.${encodeURIComponent(groupOrderId)}&select=created_by,title,target_quantity,unit_price,price_units_per_order_unit,currency&limit=1`).catch(()=>[]))[0];if(!order)return NextResponse.json({error:'Group Order nem található.'},{status:404});
+    const pct=1.5;const amount=num(order.target_quantity)*Math.max(0.000001,num(order.price_units_per_order_unit)||1)*num(order.unit_price)*pct/100;const commissionStatus=text(b.commission_status||'DUE');
     await serviceWrite(`group_orders?id=eq.${encodeURIComponent(groupOrderId)}`,{method:'PATCH',body:JSON.stringify({platform_fee_pct:pct,platform_fee_amount:amount,commission_status:commissionStatus,updated_at:new Date().toISOString()})});
     const existing=(await serviceSelect<any[]>(`revenue_ledger?reference_type=eq.GROUP_ORDER&reference_id=eq.${encodeURIComponent(groupOrderId)}&source_type=eq.GROUP_ORDER_FEE&select=id&limit=1`).catch(()=>[]))[0];
     const ledgerStatus=commissionStatus==='PAID'?'PAID':commissionStatus==='WAIVED'?'WAIVED':commissionStatus==='INVOICED'?'INVOICED':'PENDING';
     const ledgerPayload={user_id:order.created_by,source_type:'GROUP_ORDER_FEE',offer_code:'GROUP_ORDER_TRANSACTION_FEE',reference_type:'GROUP_ORDER',reference_id:groupOrderId,description:`Group Order fee – ${order.title||groupOrderId}`,amount,currency:order.currency||'EUR',status:ledgerStatus,updated_at:new Date().toISOString(),...(ledgerStatus==='PAID'?{paid_at:new Date().toISOString()}:{})};
     if(existing)await serviceWrite(`revenue_ledger?id=eq.${existing.id}`,{method:'PATCH',body:JSON.stringify(ledgerPayload)});else if(amount>0)await serviceWrite('revenue_ledger',{method:'POST',body:JSON.stringify(ledgerPayload)});
-    return NextResponse.json({success:true,platform_fee_amount:amount});
+
+    // BulkPact charges the buyer side the same fixed 1.5% on each active commitment.
+    const commitments=await serviceSelect<any[]>(`group_order_commitments?group_order_id=eq.${encodeURIComponent(groupOrderId)}&status=neq.CANCELLED&select=id,buyer_id,quantity&limit=1000`).catch(()=>[]);
+    const buyerFeeStatus=commissionStatus==='PAID'?'PAID':commissionStatus==='WAIVED'?'WAIVED':commissionStatus==='INVOICED'?'INVOICED':commissionStatus==='DUE'?'DUE':'NOT_DUE';
+    for(const commitment of commitments){
+      const buyerAmount=num(commitment.quantity)*Math.max(0.000001,num(order.price_units_per_order_unit)||1)*num(order.unit_price)*0.015;
+      await serviceWrite(`group_order_commitments?id=eq.${encodeURIComponent(commitment.id)}`,{method:'PATCH',body:JSON.stringify({buyer_fee_pct:1.5,buyer_fee_amount:buyerAmount,buyer_fee_status:buyerFeeStatus,updated_at:new Date().toISOString()})});
+      const buyerExisting=(await serviceSelect<any[]>(`revenue_ledger?reference_type=eq.GROUP_ORDER_COMMITMENT&reference_id=eq.${encodeURIComponent(commitment.id)}&source_type=eq.BUYER_GROUP_ORDER_FEE&select=id&limit=1`).catch(()=>[]))[0];
+      const buyerLedgerStatus=buyerFeeStatus==='PAID'?'PAID':buyerFeeStatus==='WAIVED'?'WAIVED':buyerFeeStatus==='INVOICED'?'INVOICED':buyerFeeStatus==='DUE'?'PENDING':'PENDING';
+      const buyerPayload={user_id:commitment.buyer_id,source_type:'BUYER_GROUP_ORDER_FEE',offer_code:'SUCCESS_FEE',reference_type:'GROUP_ORDER_COMMITMENT',reference_id:commitment.id,description:`Buyer fee – ${order.title||groupOrderId}`,amount:buyerAmount,currency:order.currency||'EUR',status:buyerLedgerStatus,updated_at:new Date().toISOString(),...(buyerLedgerStatus==='PAID'?{paid_at:new Date().toISOString()}:{})};
+      if(buyerExisting)await serviceWrite(`revenue_ledger?id=eq.${buyerExisting.id}`,{method:'PATCH',body:JSON.stringify(buyerPayload)});else if(buyerAmount>0&&buyerFeeStatus!=='NOT_DUE')await serviceWrite('revenue_ledger',{method:'POST',body:JSON.stringify(buyerPayload)});
+    }
+    return NextResponse.json({success:true,platform_fee_pct:pct,platform_fee_amount:amount,buyer_fee_pct:1.5,buyer_fee_commitments:commitments.length});
   }
   return NextResponse.json({error:'Hiányzó cél.'},{status:400});
 }
