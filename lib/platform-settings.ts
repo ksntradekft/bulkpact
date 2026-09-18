@@ -1,4 +1,0 @@
-import {serviceSelect} from './supabase-rest';
-export type PlatformSettings={registrations_enabled:boolean;group_orders_enabled:boolean;support_enabled:boolean;maintenance_banner_hu:string;maintenance_banner_en:string;support_email:string;default_currency:string};
-export const DEFAULT_PLATFORM_SETTINGS:PlatformSettings={registrations_enabled:true,group_orders_enabled:true,support_enabled:true,maintenance_banner_hu:'',maintenance_banner_en:'',support_email:'',default_currency:'EUR'};
-export async function getPlatformSettings():Promise<PlatformSettings>{try{const rows=await serviceSelect<any[]>('platform_settings?select=key,value');const out:any={...DEFAULT_PLATFORM_SETTINGS};for(const row of rows)if(row.key in out)out[row.key]=row.value;return out}catch{return DEFAULT_PLATFORM_SETTINGS}}

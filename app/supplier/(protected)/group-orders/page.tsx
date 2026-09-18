@@ -1,4 +1,0 @@
-import ManufacturerGroupOrdersClient from '@/components/portal/ManufacturerGroupOrdersClient';
-import { getLocale } from '@/lib/i18n-server';
-export const dynamic='force-dynamic';
-export default async function Page(){const locale=await getLocale();const en=locale==='en';return <main className="portal-page"><p className="eyebrow">{en?'MANUFACTURER AND WHOLESALE OFFERS':'BESZÁLLÍTÓI AJÁNLATOK'}</p><h1>{en?'Offer a lot that multiple buyers can purchase together':'Kínálj fel közösen megvásárolható tételt'}</h1><p className="portal-lead">{en?'Submit a product whose MOQ is too high for one buyer. The admin reviews the offer before opening it to retailers.':'Rögzíts olyan terméket, amelynek túl magas az egyetlen vevőre jutó minimumrendelése. Az admin ellenőrzi az ajánlatot, majd megnyitja a kampányt a kiskereskedőknek.'}</p><ManufacturerGroupOrdersClient locale={locale}/></main>}

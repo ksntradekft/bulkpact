@@ -1,2 +1,0 @@
-import Link from'next/link';import{getLocale}from'@/lib/i18n-server';
-export default async function Page(){const locale=await getLocale();const en=locale==='en';return <main className="auth-page"><section className="auth-card"><h1>{en?'Your account is suspended':'A fiók fel van függesztve'}</h1><p>{en?'Please contact the BulkPact administrator.':'Vedd fel a kapcsolatot a BulkPact adminisztrátorával.'}</p><Link className="button" href="/">{en?'Home':'Főoldal'}</Link></section></main>}

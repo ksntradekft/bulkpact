@@ -1,1 +1,0 @@
-import PortalShell from '@/components/portal/PortalShell';import { requirePageRole } from '@/lib/auth-server';export default async function Layout({children}:{children:React.ReactNode}){const session=await requirePageRole('ADMIN');return <PortalShell session={session}>{children}</PortalShell>}

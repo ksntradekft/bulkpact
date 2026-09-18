@@ -1,4 +1,0 @@
-import CommercialClient from '@/components/platform/CommercialClient';
-import { getLocale } from '@/lib/i18n-server';
-export const dynamic='force-dynamic';
-export default async function Page(){const locale=await getLocale();const en=locale==='en';return <main className="portal-page"><p className="eyebrow">MONETIZATION</p><h1>{en?'Commercial engine':'Kereskedelmi motor'}</h1><p className="portal-lead">{en?'Buyer, manufacturer and wholesaler subscriptions, add-ons, success fees, Group Order fees and the revenue ledger in one control center. Automatic card charging is intentionally not enabled in the initial release.':'Vevői, gyártói és nagykereskedői előfizetések, kiegészítő szolgáltatások, success fee, Group Order díj és bevételi ledger egy adminfelületen. Automatikus bankkártyaterhelés az első kiadásban szándékosan nincs bekapcsolva.'}</p><CommercialClient locale={locale}/></main>}

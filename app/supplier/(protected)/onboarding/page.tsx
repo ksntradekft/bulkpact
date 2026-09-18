@@ -1,1 +1,0 @@
-import OnboardingClient from '@/components/platform/OnboardingClient';import {getLocale} from '@/lib/i18n-server';export default async function Page(){const locale=await getLocale();return <main className="portal-page"><OnboardingClient locale={locale} role="MANUFACTURER"/></main>}

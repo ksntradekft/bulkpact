@@ -1,1 +1,0 @@
-import LandedCostCalculator from '@/components/platform/LandedCostCalculator';import {getLocale} from '@/lib/i18n-server';export default async function Page(){const locale=await getLocale();return <main className="portal-page"><LandedCostCalculator locale={locale}/></main>}

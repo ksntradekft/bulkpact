@@ -1,2 +1,0 @@
-import AuthForm from '@/components/auth/AuthForm';import {getLocale} from '@/lib/i18n-server';
-export default async function Page(){const locale=await getLocale();const en=locale==='en';return <AuthForm mode="login" role="ADMIN" locale={locale} title={en?'Administrator login':'Admin bejelentkezés'} subtitle={en?'Access manufacturer discovery, users, projects and pooled orders.':'Belépés a gyártófelderítéshez, felhasználókhoz, projektekhez és közös rendelésekhez.'}/>}

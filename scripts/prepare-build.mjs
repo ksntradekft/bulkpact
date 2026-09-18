@@ -1,6 +1,0 @@
-import { readdir } from 'node:fs/promises';
-import path from 'node:path';
-const projectRoot=process.cwd(),appRoot=path.join(projectRoot,'app');
-async function collectPages(directory,pages=[]){for(const entry of await readdir(directory,{withFileTypes:true})){const absolute=path.join(directory,entry.name);if(entry.isDirectory())await collectPages(absolute,pages);else if(entry.isFile()&&entry.name==='page.tsx')pages.push(absolute)}return pages}
-function publicRouteFor(pagePath){const relative=path.relative(appRoot,path.dirname(pagePath));const segments=relative.split(path.sep).filter(Boolean).filter(s=>!(s.startsWith('(')&&s.endsWith(')'))).filter(s=>!s.startsWith('@'));return`/${segments.join('/')}`.replace(/\/$/,'')||'/'}
-const owners=new Map();for(const page of await collectPages(appRoot)){const route=publicRouteFor(page),list=owners.get(route)||[];list.push(path.relative(projectRoot,page));owners.set(route,list)}const collisions=[...owners.entries()].filter(([,list])=>list.length>1);if(collisions.length){console.error('[prepare-build] Duplicate Next.js page routes:');for(const[route,list]of collisions){console.error(`  ${route}`);for(const p of list)console.error(`    - ${p}`)}process.exit(1)}console.log(`[prepare-build] BulkPact route check passed (${owners.size} page routes).`);
